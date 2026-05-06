@@ -23,6 +23,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | [docs/design/phase3.md](docs/design/phase3.md) | Phase 3 — 플레이어 등장 및 이동 (useRef 상태, 키 입력, 벽 충돌) |
 | [docs/design/phase4.md](docs/design/phase4.md) | Phase 4 — 풍선 등장 및 물리 (중력, 바닥·벽 반사, 크기별 설정) |
 | [docs/design/phase5.md](docs/design/phase5.md) | Phase 5 — 와이어 발사 (Wire 상태, 1발 제한, 천장 소멸) |
+| [docs/design/phase6.md](docs/design/phase6.md) | Phase 6 — 풍선 격파 및 분열 (충돌 감지, splitBalloon, 클리어 판정) |
 
 ## 기술 스택
 

@@ -88,6 +88,34 @@ function drawWire(ctx: CanvasRenderingContext2D, wire: Wire) {
   ctx.fill()
 }
 
+function collidesWireBalloon(wire: Wire, b: Balloon): boolean {
+  if (Math.abs(wire.x - b.x) > b.radius) return false
+  if (wire.tipY > b.y + b.radius) return false
+  if (wire.baseY < b.y - b.radius) return false
+  return true
+}
+
+function splitBalloon(b: Balloon): Balloon[] {
+  if (b.size <= 1) return []
+  const newSize = b.size - 1
+  const cfg = BALLOON_SIZES[newSize]
+  return [
+    { x: b.x, y: b.y, vx: -cfg.speed, vy: cfg.bounceVy, size: newSize, radius: cfg.radius, color: cfg.color, bounceVy: cfg.bounceVy },
+    { x: b.x, y: b.y, vx:  cfg.speed, vy: cfg.bounceVy, size: newSize, radius: cfg.radius, color: cfg.color, bounceVy: cfg.bounceVy },
+  ]
+}
+
+function drawClearOverlay(ctx: CanvasRenderingContext2D) {
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.55)'
+  ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT)
+
+  ctx.fillStyle = '#ffd700'
+  ctx.font = '28px "Press Start 2P", monospace'
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillText('STAGE CLEAR!', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2)
+}
+
 function updateBalloon(b: Balloon) {
   b.vy += GRAVITY
   b.y += b.vy
@@ -236,6 +264,7 @@ function GameScreen() {
   const keysRef = useRef({ left: false, right: false })
   const balloonsRef = useRef<Balloon[]>(createInitialBalloons())
   const wireRef = useRef<Wire>({ x: 0, tipY: 0, baseY: 0, active: false })
+  const clearedRef = useRef(false)
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -264,22 +293,48 @@ function GameScreen() {
     let animationId: number
 
     const loop = () => {
-      // update
-      const player = playerRef.current
-      const keys = keysRef.current
-      if (keys.left)  player.x = Math.max(WALL_X, player.x - PLAYER_SPEED)
-      if (keys.right) player.x = Math.min(CANVAS_WIDTH - WALL_X - PLAYER_W, player.x + PLAYER_SPEED)
+      if (!clearedRef.current) {
+        // update
+        const player = playerRef.current
+        const keys = keysRef.current
+        if (keys.left)  player.x = Math.max(WALL_X, player.x - PLAYER_SPEED)
+        if (keys.right) player.x = Math.min(CANVAS_WIDTH - WALL_X - PLAYER_W, player.x + PLAYER_SPEED)
 
-      balloonsRef.current.forEach(updateBalloon)
-      updateWire(wireRef.current)
+        balloonsRef.current.forEach(updateBalloon)
+        updateWire(wireRef.current)
+
+        // 충돌 감지 및 분열
+        const wire = wireRef.current
+        if (wire.active) {
+          let hit = false
+          const next: Balloon[] = []
+          for (const b of balloonsRef.current) {
+            if (!hit && collidesWireBalloon(wire, b)) {
+              hit = true
+              wire.active = false
+              next.push(...splitBalloon(b))
+            } else {
+              next.push(b)
+            }
+          }
+          if (hit) balloonsRef.current = next
+        }
+
+        // 클리어 판정
+        if (balloonsRef.current.length === 0) {
+          clearedRef.current = true
+        }
+      }
 
       // render
+      const player = playerRef.current
       ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT)
       drawBackground(ctx)
       drawBoundaries(ctx)
       drawWire(ctx, wireRef.current)
       drawPlayer(ctx, player.x, FLOOR_Y - PLAYER_H)
       balloonsRef.current.forEach(b => drawBalloon(ctx, b))
+      if (clearedRef.current) drawClearOverlay(ctx)
 
       animationId = requestAnimationFrame(loop)
     }
