@@ -2,6 +2,15 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 프로젝트 문서
+
+| 문서 | 설명 |
+|------|------|
+| [docs/PRD.md](docs/PRD.md) | 게임 전체 개요 및 미션 1 스펙 |
+| [docs/FEATURES/main.md](docs/FEATURES/main.md) | 메인 화면 레이아웃 및 구성 요소 |
+| [docs/FEATURES/game_rule.md](docs/FEATURES/game_rule.md) | 풍선 동작, 플레이어, 무기, 점수 등 게임 룰 상세 |
+| [docs/FEATURES/mission1.md](docs/FEATURES/mission1.md) | 미션 1 난이도, 풍선 구성, 클리어 조건 |
+
 ## 기술 스택
 
 - **React 19** + **TypeScript 6** — UI 프레임워크 및 타입 시스템
