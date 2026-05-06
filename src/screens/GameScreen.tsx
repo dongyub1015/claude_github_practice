@@ -9,12 +9,20 @@ const PLAYER_W = 28
 const PLAYER_H = 44
 const PLAYER_SPEED = 4
 const GRAVITY = 0.2
+const WIRE_SPEED = 10
 
 const BALLOON_SIZES: Record<number, { radius: number; speed: number; bounceVy: number; color: string }> = {
   4: { radius: 40, speed: 2.0, bounceVy: -13, color: '#e63946' },
   3: { radius: 28, speed: 2.5, bounceVy: -10, color: '#f4a261' },
   2: { radius: 18, speed: 3.0, bounceVy: -8,  color: '#457b9d' },
   1: { radius: 10, speed: 3.5, bounceVy: -6,  color: '#2a9d8f' },
+}
+
+interface Wire {
+  x: number
+  tipY: number
+  baseY: number
+  active: boolean
 }
 
 interface Balloon {
@@ -52,6 +60,32 @@ function createInitialBalloons(): Balloon[] {
       bounceVy: cfg.bounceVy,
     },
   ]
+}
+
+function updateWire(wire: Wire) {
+  if (!wire.active) return
+  wire.tipY -= WIRE_SPEED
+  if (wire.tipY <= 0) {
+    wire.active = false
+  }
+}
+
+function drawWire(ctx: CanvasRenderingContext2D, wire: Wire) {
+  if (!wire.active) return
+
+  // 와이어 몸체
+  ctx.strokeStyle = '#ffffff'
+  ctx.lineWidth = 2
+  ctx.beginPath()
+  ctx.moveTo(wire.x, wire.baseY)
+  ctx.lineTo(wire.x, wire.tipY)
+  ctx.stroke()
+
+  // 작살 끝
+  ctx.fillStyle = '#ffe600'
+  ctx.beginPath()
+  ctx.arc(wire.x, wire.tipY, 4, 0, Math.PI * 2)
+  ctx.fill()
 }
 
 function updateBalloon(b: Balloon) {
@@ -201,6 +235,7 @@ function GameScreen() {
   const playerRef = useRef({ x: (CANVAS_WIDTH - PLAYER_W) / 2 })
   const keysRef = useRef({ left: false, right: false })
   const balloonsRef = useRef<Balloon[]>(createInitialBalloons())
+  const wireRef = useRef<Wire>({ x: 0, tipY: 0, baseY: 0, active: false })
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -209,9 +244,14 @@ function GameScreen() {
     if (!ctx) return
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') e.preventDefault()
+      if (['ArrowLeft', 'ArrowRight', ' '].includes(e.key)) e.preventDefault()
       if (e.key === 'ArrowLeft') keysRef.current.left = true
       if (e.key === 'ArrowRight') keysRef.current.right = true
+      if ((e.key === ' ' || e.key === 'z') && !wireRef.current.active) {
+        const player = playerRef.current
+        const fireY = FLOOR_Y - PLAYER_H
+        wireRef.current = { x: player.x + PLAYER_W / 2, tipY: fireY, baseY: fireY, active: true }
+      }
     }
     const handleKeyUp = (e: KeyboardEvent) => {
       if (e.key === 'ArrowLeft') keysRef.current.left = false
@@ -231,11 +271,13 @@ function GameScreen() {
       if (keys.right) player.x = Math.min(CANVAS_WIDTH - WALL_X - PLAYER_W, player.x + PLAYER_SPEED)
 
       balloonsRef.current.forEach(updateBalloon)
+      updateWire(wireRef.current)
 
       // render
       ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT)
       drawBackground(ctx)
       drawBoundaries(ctx)
+      drawWire(ctx, wireRef.current)
       drawPlayer(ctx, player.x, FLOOR_Y - PLAYER_H)
       balloonsRef.current.forEach(b => drawBalloon(ctx, b))
 

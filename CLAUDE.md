@@ -22,6 +22,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | [docs/design/phase2.md](docs/design/phase2.md) | Phase 2 — 게임 캔버스 및 배경 (화면 전환, Canvas 게임 루프, 경계선) |
 | [docs/design/phase3.md](docs/design/phase3.md) | Phase 3 — 플레이어 등장 및 이동 (useRef 상태, 키 입력, 벽 충돌) |
 | [docs/design/phase4.md](docs/design/phase4.md) | Phase 4 — 풍선 등장 및 물리 (중력, 바닥·벽 반사, 크기별 설정) |
+| [docs/design/phase5.md](docs/design/phase5.md) | Phase 5 — 와이어 발사 (Wire 상태, 1발 제한, 천장 소멸) |
 
 ## 기술 스택
 
