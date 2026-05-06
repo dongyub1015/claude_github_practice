@@ -8,6 +8,78 @@ const WALL_X = 3
 const PLAYER_W = 28
 const PLAYER_H = 44
 const PLAYER_SPEED = 4
+const GRAVITY = 0.2
+
+const BALLOON_SIZES: Record<number, { radius: number; speed: number; bounceVy: number; color: string }> = {
+  4: { radius: 40, speed: 2.0, bounceVy: -13, color: '#e63946' },
+  3: { radius: 28, speed: 2.5, bounceVy: -10, color: '#f4a261' },
+  2: { radius: 18, speed: 3.0, bounceVy: -8,  color: '#457b9d' },
+  1: { radius: 10, speed: 3.5, bounceVy: -6,  color: '#2a9d8f' },
+}
+
+interface Balloon {
+  x: number
+  y: number
+  vx: number
+  vy: number
+  size: number
+  radius: number
+  color: string
+  bounceVy: number
+}
+
+function createInitialBalloons(): Balloon[] {
+  const cfg = BALLOON_SIZES[4]
+  return [
+    {
+      x: CANVAS_WIDTH / 3,
+      y: FLOOR_Y - cfg.radius,
+      vx: -cfg.speed,
+      vy: cfg.bounceVy,
+      size: 4,
+      radius: cfg.radius,
+      color: cfg.color,
+      bounceVy: cfg.bounceVy,
+    },
+    {
+      x: (CANVAS_WIDTH * 2) / 3,
+      y: FLOOR_Y - cfg.radius,
+      vx: cfg.speed,
+      vy: cfg.bounceVy,
+      size: 4,
+      radius: cfg.radius,
+      color: cfg.color,
+      bounceVy: cfg.bounceVy,
+    },
+  ]
+}
+
+function updateBalloon(b: Balloon) {
+  b.vy += GRAVITY
+  b.y += b.vy
+  b.x += b.vx
+
+  // 바닥 반사
+  if (b.y + b.radius >= FLOOR_Y) {
+    b.y = FLOOR_Y - b.radius
+    b.vy = b.bounceVy
+  }
+  // 왼쪽 벽 반사
+  if (b.x - b.radius <= WALL_X) {
+    b.x = WALL_X + b.radius
+    b.vx = Math.abs(b.vx)
+  }
+  // 오른쪽 벽 반사
+  if (b.x + b.radius >= CANVAS_WIDTH - WALL_X) {
+    b.x = CANVAS_WIDTH - WALL_X - b.radius
+    b.vx = -Math.abs(b.vx)
+  }
+  // 천장 이탈 방지
+  if (b.y - b.radius <= 0) {
+    b.y = b.radius
+    b.vy = Math.abs(b.vy)
+  }
+}
 
 function drawCloud(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number) {
   ctx.fillStyle = 'rgba(255, 255, 255, 0.88)'
@@ -89,10 +161,46 @@ function drawPlayer(ctx: CanvasRenderingContext2D, x: number, y: number) {
   ctx.fillRect(x + 2, y + 26, PLAYER_W - 4, PLAYER_H - 26)
 }
 
+function drawBalloon(ctx: CanvasRenderingContext2D, b: Balloon) {
+  const { x, y, radius, color } = b
+
+  // 본체
+  ctx.fillStyle = color
+  ctx.beginPath()
+  ctx.arc(x, y, radius, 0, Math.PI * 2)
+  ctx.fill()
+
+  // 외곽선
+  ctx.strokeStyle = 'rgba(0, 0, 0, 0.25)'
+  ctx.lineWidth = 2
+  ctx.stroke()
+
+  // 하이라이트 (3D 효과)
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.35)'
+  ctx.beginPath()
+  ctx.arc(x - radius * 0.28, y - radius * 0.28, radius * 0.38, 0, Math.PI * 2)
+  ctx.fill()
+
+  // 매듭
+  ctx.fillStyle = color
+  ctx.beginPath()
+  ctx.arc(x, y + radius + 4, 4, 0, Math.PI * 2)
+  ctx.fill()
+
+  // 실
+  ctx.strokeStyle = 'rgba(0, 0, 0, 0.35)'
+  ctx.lineWidth = 1
+  ctx.beginPath()
+  ctx.moveTo(x, y + radius + 8)
+  ctx.lineTo(x + 3, y + radius + 16)
+  ctx.stroke()
+}
+
 function GameScreen() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const playerRef = useRef({ x: (CANVAS_WIDTH - PLAYER_W) / 2 })
   const keysRef = useRef({ left: false, right: false })
+  const balloonsRef = useRef<Balloon[]>(createInitialBalloons())
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -119,14 +227,17 @@ function GameScreen() {
       // update
       const player = playerRef.current
       const keys = keysRef.current
-      if (keys.left) player.x = Math.max(WALL_X, player.x - PLAYER_SPEED)
+      if (keys.left)  player.x = Math.max(WALL_X, player.x - PLAYER_SPEED)
       if (keys.right) player.x = Math.min(CANVAS_WIDTH - WALL_X - PLAYER_W, player.x + PLAYER_SPEED)
+
+      balloonsRef.current.forEach(updateBalloon)
 
       // render
       ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT)
       drawBackground(ctx)
       drawBoundaries(ctx)
       drawPlayer(ctx, player.x, FLOOR_Y - PLAYER_H)
+      balloonsRef.current.forEach(b => drawBalloon(ctx, b))
 
       animationId = requestAnimationFrame(loop)
     }
