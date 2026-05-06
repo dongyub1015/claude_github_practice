@@ -19,6 +19,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | 문서 | 설명 |
 |------|------|
 | [docs/design/phase1.md](docs/design/phase1.md) | Phase 1 — 메인 화면 (레이아웃, 컴포넌트 구조, 상태·키 입력 처리) |
+| [docs/design/phase2.md](docs/design/phase2.md) | Phase 2 — 게임 캔버스 및 배경 (화면 전환, Canvas 게임 루프, 경계선) |
 
 ## 기술 스택
 

@@ -6,13 +6,17 @@ import './MainScreen.css'
 
 const MENU_ITEMS = ['1 PLAYER', '게임 종료']
 
-function MainScreen() {
+interface Props {
+  onStart: () => void
+}
+
+function MainScreen({ onStart }: Props) {
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [showExitMessage, setShowExitMessage] = useState(false)
 
   const execute = (index: number) => {
     if (index === 0) {
-      console.log('1 PLAYER — Phase 2에서 게임 화면으로 전환 예정')
+      onStart()
     } else {
       setShowExitMessage(true)
     }
