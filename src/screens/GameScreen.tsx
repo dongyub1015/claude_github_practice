@@ -14,6 +14,8 @@ const INITIAL_LIVES = 3
 const RESPAWN_FRAMES = 60
 const TIME_LIMIT = 60
 
+const BALLOON_SCORES: Record<number, number> = { 4: 100, 3: 200, 2: 400, 1: 800 }
+
 const BALLOON_SIZES: Record<number, { radius: number; speed: number; bounceVy: number; color: string }> = {
   4: { radius: 40, speed: 2.0, bounceVy: -13, color: '#e63946' },
   3: { radius: 28, speed: 2.5, bounceVy: -10, color: '#f4a261' },
@@ -120,7 +122,7 @@ function collidesPlayerBalloon(playerX: number, b: Balloon): boolean {
   return dx * dx + dy * dy < b.radius * b.radius
 }
 
-function drawHUD(ctx: CanvasRenderingContext2D, lives: number, timer: number) {
+function drawHUD(ctx: CanvasRenderingContext2D, lives: number, timer: number, score: number) {
   ctx.fillStyle = 'rgba(0, 0, 0, 0.5)'
   ctx.fillRect(0, 0, CANVAS_WIDTH, 30)
 
@@ -141,6 +143,11 @@ function drawHUD(ctx: CanvasRenderingContext2D, lives: number, timer: number) {
     ctx.lineWidth = 1.5
     ctx.stroke()
   }
+
+  // 점수
+  ctx.fillStyle = '#ffd700'
+  ctx.textAlign = 'center'
+  ctx.fillText(String(score).padStart(6, '0'), CANVAS_WIDTH / 2, 15)
 
   // 타이머
   const seconds = Math.ceil(timer / 60)
@@ -333,6 +340,8 @@ function GameScreen({ onGameOver }: Props) {
   const gameOverRef = useRef(false)
   const respawnTimerRef = useRef(0)
   const timerRef = useRef(TIME_LIMIT * 60)
+  const scoreRef = useRef(0)
+  const comboRef = useRef(0)
   const onGameOverRef = useRef(onGameOver)
   onGameOverRef.current = onGameOver
 
@@ -382,6 +391,7 @@ function GameScreen({ onGameOver }: Props) {
 
         // 와이어-풍선 충돌 & 분열
         const wire = wireRef.current
+        const wasWireActive = wire.active
         if (wire.active) {
           let hit = false
           const next: Balloon[] = []
@@ -389,12 +399,16 @@ function GameScreen({ onGameOver }: Props) {
             if (!hit && collidesWireBalloon(wire, b)) {
               hit = true
               wire.active = false
+              comboRef.current += 1
+              const multiplier = Math.min(2 ** (comboRef.current - 1), 8)
+              scoreRef.current += BALLOON_SCORES[b.size] * multiplier
               next.push(...splitBalloon(b))
             } else {
               next.push(b)
             }
           }
           if (hit) balloonsRef.current = next
+          else if (!wire.active && wasWireActive) comboRef.current = 0  // 천장 소멸
         }
 
         // 클리어 판정
@@ -409,6 +423,7 @@ function GameScreen({ onGameOver }: Props) {
           const die = (resetTimer: boolean) => {
             livesRef.current -= 1
             wireRef.current.active = false
+            comboRef.current = 0
             if (livesRef.current <= 0) {
               gameOverRef.current = true
             } else {
@@ -442,7 +457,7 @@ function GameScreen({ onGameOver }: Props) {
       if (showPlayer) drawPlayer(ctx, player.x, FLOOR_Y - PLAYER_H)
 
       balloonsRef.current.forEach(b => drawBalloon(ctx, b))
-      drawHUD(ctx, livesRef.current, timerRef.current)
+      drawHUD(ctx, livesRef.current, timerRef.current, scoreRef.current)
 
       if (clearedRef.current) drawClearOverlay(ctx)
       if (gameOverRef.current) drawGameOverOverlay(ctx)
