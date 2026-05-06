@@ -12,6 +12,7 @@ const GRAVITY = 0.2
 const WIRE_SPEED = 10
 const INITIAL_LIVES = 3
 const RESPAWN_FRAMES = 60
+const TIME_LIMIT = 60
 
 const BALLOON_SIZES: Record<number, { radius: number; speed: number; bounceVy: number; color: string }> = {
   4: { radius: 40, speed: 2.0, bounceVy: -13, color: '#e63946' },
@@ -119,14 +120,16 @@ function collidesPlayerBalloon(playerX: number, b: Balloon): boolean {
   return dx * dx + dy * dy < b.radius * b.radius
 }
 
-function drawHUD(ctx: CanvasRenderingContext2D, lives: number) {
+function drawHUD(ctx: CanvasRenderingContext2D, lives: number, timer: number) {
   ctx.fillStyle = 'rgba(0, 0, 0, 0.5)'
   ctx.fillRect(0, 0, CANVAS_WIDTH, 30)
 
-  ctx.fillStyle = '#ffffff'
   ctx.font = '10px "Press Start 2P", monospace'
-  ctx.textAlign = 'left'
   ctx.textBaseline = 'middle'
+
+  // 잔기
+  ctx.fillStyle = '#ffffff'
+  ctx.textAlign = 'left'
   ctx.fillText('LIFE', 8, 15)
 
   for (let i = 0; i < lives; i++) {
@@ -138,6 +141,12 @@ function drawHUD(ctx: CanvasRenderingContext2D, lives: number) {
     ctx.lineWidth = 1.5
     ctx.stroke()
   }
+
+  // 타이머
+  const seconds = Math.ceil(timer / 60)
+  ctx.fillStyle = seconds <= 10 ? '#ff4400' : '#ffffff'
+  ctx.textAlign = 'right'
+  ctx.fillText(`TIME  ${String(seconds).padStart(2, '0')}`, CANVAS_WIDTH - 8, 15)
 }
 
 function drawGameOverOverlay(ctx: CanvasRenderingContext2D) {
@@ -323,6 +332,7 @@ function GameScreen({ onGameOver }: Props) {
   const livesRef = useRef(INITIAL_LIVES)
   const gameOverRef = useRef(false)
   const respawnTimerRef = useRef(0)
+  const timerRef = useRef(TIME_LIMIT * 60)
   const onGameOverRef = useRef(onGameOver)
   onGameOverRef.current = onGameOver
 
@@ -392,18 +402,30 @@ function GameScreen({ onGameOver }: Props) {
           clearedRef.current = true
         }
 
-        // 플레이어-풍선 충돌 (리스폰 무적 중 스킵)
+        // 타이머 & 사망 판정 (리스폰 무적 중 스킵)
         if (respawnTimerRef.current === 0) {
-          const isDead = balloonsRef.current.some(b => collidesPlayerBalloon(player.x, b))
-          if (isDead) {
+          timerRef.current -= 1
+
+          const die = (resetTimer: boolean) => {
             livesRef.current -= 1
             wireRef.current.active = false
             if (livesRef.current <= 0) {
               gameOverRef.current = true
             } else {
               player.x = (CANVAS_WIDTH - PLAYER_W) / 2
+              if (resetTimer) timerRef.current = TIME_LIMIT * 60
               respawnTimerRef.current = RESPAWN_FRAMES
             }
+          }
+
+          if (timerRef.current <= 0) {
+            // 시간 초과
+            timerRef.current = 0
+            die(true)
+          } else {
+            // 플레이어-풍선 충돌
+            const isDead = balloonsRef.current.some(b => collidesPlayerBalloon(player.x, b))
+            if (isDead) die(true)
           }
         }
       }
@@ -420,7 +442,7 @@ function GameScreen({ onGameOver }: Props) {
       if (showPlayer) drawPlayer(ctx, player.x, FLOOR_Y - PLAYER_H)
 
       balloonsRef.current.forEach(b => drawBalloon(ctx, b))
-      drawHUD(ctx, livesRef.current)
+      drawHUD(ctx, livesRef.current, timerRef.current)
 
       if (clearedRef.current) drawClearOverlay(ctx)
       if (gameOverRef.current) drawGameOverOverlay(ctx)
