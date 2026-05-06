@@ -176,11 +176,16 @@ function drawClearOverlay(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = 'rgba(0, 0, 0, 0.55)'
   ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT)
 
-  ctx.fillStyle = '#ffd700'
-  ctx.font = '28px "Press Start 2P", monospace'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
-  ctx.fillText('STAGE CLEAR!', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2)
+
+  ctx.fillStyle = '#ffd700'
+  ctx.font = '28px "Press Start 2P", monospace'
+  ctx.fillText('STAGE CLEAR!', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 24)
+
+  ctx.fillStyle = '#ffffff'
+  ctx.font = '11px "Press Start 2P", monospace'
+  ctx.fillText('PRESS ENTER', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 28)
 }
 
 function updateBalloon(b: Balloon) {
@@ -326,10 +331,11 @@ function drawBalloon(ctx: CanvasRenderingContext2D, b: Balloon) {
 }
 
 interface Props {
-  onGameOver: () => void
+  onGameOver: (score: number) => void
+  onClear: (score: number) => void
 }
 
-function GameScreen({ onGameOver }: Props) {
+function GameScreen({ onGameOver, onClear }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const playerRef = useRef({ x: (CANVAS_WIDTH - PLAYER_W) / 2 })
   const keysRef = useRef({ left: false, right: false })
@@ -344,6 +350,8 @@ function GameScreen({ onGameOver }: Props) {
   const comboRef = useRef(0)
   const onGameOverRef = useRef(onGameOver)
   onGameOverRef.current = onGameOver
+  const onClearRef = useRef(onClear)
+  onClearRef.current = onClear
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -360,8 +368,11 @@ function GameScreen({ onGameOver }: Props) {
         const fireY = FLOOR_Y - PLAYER_H
         wireRef.current = { x: player.x + PLAYER_W / 2, tipY: fireY, baseY: fireY, active: true }
       }
+      if (e.key === 'Enter' && clearedRef.current) {
+        onClearRef.current(scoreRef.current)
+      }
       if (e.key === 'Enter' && gameOverRef.current) {
-        onGameOverRef.current()
+        onGameOverRef.current(scoreRef.current)
       }
     }
     const handleKeyUp = (e: KeyboardEvent) => {

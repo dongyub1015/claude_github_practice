@@ -6,11 +6,17 @@ type Screen = 'main' | 'game'
 
 function App() {
   const [screen, setScreen] = useState<Screen>('main')
+  const [hiScore, setHiScore] = useState(0)
+
+  const handleEnd = (score: number) => {
+    setHiScore(prev => Math.max(prev, score))
+    setScreen('main')
+  }
 
   if (screen === 'game') {
-    return <GameScreen onGameOver={() => setScreen('main')} />
+    return <GameScreen onGameOver={handleEnd} onClear={handleEnd} />
   }
-  return <MainScreen onStart={() => setScreen('game')} />
+  return <MainScreen onStart={() => setScreen('game')} hiScore={hiScore} />
 }
 
 export default App

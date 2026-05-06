@@ -8,9 +8,10 @@ const MENU_ITEMS = ['1 PLAYER', '게임 종료']
 
 interface Props {
   onStart: () => void
+  hiScore: number
 }
 
-function MainScreen({ onStart }: Props) {
+function MainScreen({ onStart, hiScore }: Props) {
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [showExitMessage, setShowExitMessage] = useState(false)
 
@@ -56,7 +57,7 @@ function MainScreen({ onStart }: Props) {
   return (
     <div className="main-screen">
       <Title />
-      <HiScore score={0} />
+      <HiScore score={hiScore} />
       <MenuList
         items={MENU_ITEMS}
         selectedIndex={selectedIndex}
