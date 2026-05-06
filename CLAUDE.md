@@ -24,6 +24,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | [docs/design/phase4.md](docs/design/phase4.md) | Phase 4 — 풍선 등장 및 물리 (중력, 바닥·벽 반사, 크기별 설정) |
 | [docs/design/phase5.md](docs/design/phase5.md) | Phase 5 — 와이어 발사 (Wire 상태, 1발 제한, 천장 소멸) |
 | [docs/design/phase6.md](docs/design/phase6.md) | Phase 6 — 풍선 격파 및 분열 (충돌 감지, splitBalloon, 클리어 판정) |
+| [docs/design/phase7.md](docs/design/phase7.md) | Phase 7 — 플레이어 사망 및 잔기 (사각형-원 충돌, 리스폰, 게임 오버) |
 
 ## 기술 스택
 

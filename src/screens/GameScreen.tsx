@@ -10,6 +10,8 @@ const PLAYER_H = 44
 const PLAYER_SPEED = 4
 const GRAVITY = 0.2
 const WIRE_SPEED = 10
+const INITIAL_LIVES = 3
+const RESPAWN_FRAMES = 60
 
 const BALLOON_SIZES: Record<number, { radius: number; speed: number; bounceVy: number; color: string }> = {
   4: { radius: 40, speed: 2.0, bounceVy: -13, color: '#e63946' },
@@ -103,6 +105,55 @@ function splitBalloon(b: Balloon): Balloon[] {
     { x: b.x, y: b.y, vx: -cfg.speed, vy: cfg.bounceVy, size: newSize, radius: cfg.radius, color: cfg.color, bounceVy: cfg.bounceVy },
     { x: b.x, y: b.y, vx:  cfg.speed, vy: cfg.bounceVy, size: newSize, radius: cfg.radius, color: cfg.color, bounceVy: cfg.bounceVy },
   ]
+}
+
+function collidesPlayerBalloon(playerX: number, b: Balloon): boolean {
+  const left = playerX
+  const right = playerX + PLAYER_W
+  const top = FLOOR_Y - PLAYER_H
+  const bottom = FLOOR_Y
+  const cx = Math.max(left, Math.min(b.x, right))
+  const cy = Math.max(top, Math.min(b.y, bottom))
+  const dx = b.x - cx
+  const dy = b.y - cy
+  return dx * dx + dy * dy < b.radius * b.radius
+}
+
+function drawHUD(ctx: CanvasRenderingContext2D, lives: number) {
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.5)'
+  ctx.fillRect(0, 0, CANVAS_WIDTH, 30)
+
+  ctx.fillStyle = '#ffffff'
+  ctx.font = '10px "Press Start 2P", monospace'
+  ctx.textAlign = 'left'
+  ctx.textBaseline = 'middle'
+  ctx.fillText('LIFE', 8, 15)
+
+  for (let i = 0; i < lives; i++) {
+    ctx.fillStyle = '#ff2244'
+    ctx.beginPath()
+    ctx.arc(54 + i * 20, 15, 7, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.strokeStyle = '#ff8899'
+    ctx.lineWidth = 1.5
+    ctx.stroke()
+  }
+}
+
+function drawGameOverOverlay(ctx: CanvasRenderingContext2D) {
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.65)'
+  ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT)
+
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+
+  ctx.fillStyle = '#ff2244'
+  ctx.font = '28px "Press Start 2P", monospace'
+  ctx.fillText('GAME OVER', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 24)
+
+  ctx.fillStyle = '#ffffff'
+  ctx.font = '11px "Press Start 2P", monospace'
+  ctx.fillText('PRESS ENTER', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 28)
 }
 
 function drawClearOverlay(ctx: CanvasRenderingContext2D) {
@@ -258,13 +309,22 @@ function drawBalloon(ctx: CanvasRenderingContext2D, b: Balloon) {
   ctx.stroke()
 }
 
-function GameScreen() {
+interface Props {
+  onGameOver: () => void
+}
+
+function GameScreen({ onGameOver }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const playerRef = useRef({ x: (CANVAS_WIDTH - PLAYER_W) / 2 })
   const keysRef = useRef({ left: false, right: false })
   const balloonsRef = useRef<Balloon[]>(createInitialBalloons())
   const wireRef = useRef<Wire>({ x: 0, tipY: 0, baseY: 0, active: false })
   const clearedRef = useRef(false)
+  const livesRef = useRef(INITIAL_LIVES)
+  const gameOverRef = useRef(false)
+  const respawnTimerRef = useRef(0)
+  const onGameOverRef = useRef(onGameOver)
+  onGameOverRef.current = onGameOver
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -281,6 +341,9 @@ function GameScreen() {
         const fireY = FLOOR_Y - PLAYER_H
         wireRef.current = { x: player.x + PLAYER_W / 2, tipY: fireY, baseY: fireY, active: true }
       }
+      if (e.key === 'Enter' && gameOverRef.current) {
+        onGameOverRef.current()
+      }
     }
     const handleKeyUp = (e: KeyboardEvent) => {
       if (e.key === 'ArrowLeft') keysRef.current.left = false
@@ -293,17 +356,21 @@ function GameScreen() {
     let animationId: number
 
     const loop = () => {
-      if (!clearedRef.current) {
-        // update
+      if (!clearedRef.current && !gameOverRef.current) {
         const player = playerRef.current
         const keys = keysRef.current
+
+        // 리스폰 타이머 카운트다운
+        if (respawnTimerRef.current > 0) respawnTimerRef.current -= 1
+
+        // 항상 실행: 이동 + 물리
         if (keys.left)  player.x = Math.max(WALL_X, player.x - PLAYER_SPEED)
         if (keys.right) player.x = Math.min(CANVAS_WIDTH - WALL_X - PLAYER_W, player.x + PLAYER_SPEED)
 
         balloonsRef.current.forEach(updateBalloon)
         updateWire(wireRef.current)
 
-        // 충돌 감지 및 분열
+        // 와이어-풍선 충돌 & 분열
         const wire = wireRef.current
         if (wire.active) {
           let hit = false
@@ -324,6 +391,21 @@ function GameScreen() {
         if (balloonsRef.current.length === 0) {
           clearedRef.current = true
         }
+
+        // 플레이어-풍선 충돌 (리스폰 무적 중 스킵)
+        if (respawnTimerRef.current === 0) {
+          const isDead = balloonsRef.current.some(b => collidesPlayerBalloon(player.x, b))
+          if (isDead) {
+            livesRef.current -= 1
+            wireRef.current.active = false
+            if (livesRef.current <= 0) {
+              gameOverRef.current = true
+            } else {
+              player.x = (CANVAS_WIDTH - PLAYER_W) / 2
+              respawnTimerRef.current = RESPAWN_FRAMES
+            }
+          }
+        }
       }
 
       // render
@@ -332,9 +414,16 @@ function GameScreen() {
       drawBackground(ctx)
       drawBoundaries(ctx)
       drawWire(ctx, wireRef.current)
-      drawPlayer(ctx, player.x, FLOOR_Y - PLAYER_H)
+
+      // 리스폰 중 깜빡임
+      const showPlayer = respawnTimerRef.current === 0 || Math.floor(respawnTimerRef.current / 6) % 2 === 0
+      if (showPlayer) drawPlayer(ctx, player.x, FLOOR_Y - PLAYER_H)
+
       balloonsRef.current.forEach(b => drawBalloon(ctx, b))
+      drawHUD(ctx, livesRef.current)
+
       if (clearedRef.current) drawClearOverlay(ctx)
+      if (gameOverRef.current) drawGameOverOverlay(ctx)
 
       animationId = requestAnimationFrame(loop)
     }
