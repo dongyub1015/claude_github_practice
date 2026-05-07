@@ -1,11 +1,75 @@
-# 프로젝트 개요
+# CLAUDE.md
 
-이 프로젝트는 Git과 GitHub 사용법을 익히기 위한 실습 환경입니다.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## 파일 구성
+## 프로젝트 문서
 
-- 작업에 사용하는 파일은 `README.md` 하나만 사용합니다.
+| 문서 | 설명 |
+|------|------|
+| [docs/PRD.md](docs/PRD.md) | 게임 전체 개요 및 미션 1 스펙 |
+| [docs/PLAN.md](docs/PLAN.md) | Phase별 개발 목표 및 계획 |
+| [docs/FEATURES/main.md](docs/FEATURES/main.md) | 메인 화면 레이아웃 및 구성 요소 |
+| [docs/FEATURES/game_rule.md](docs/FEATURES/game_rule.md) | 풍선 동작, 플레이어, 무기, 점수 등 게임 룰 상세 |
+| [docs/FEATURES/mission1.md](docs/FEATURES/mission1.md) | 미션 1 난이도, 풍선 구성, 클리어 조건 |
 
-## Git Commit 규칙
+### Phase 설계 문서
 
-- Git 커밋 메시지 작성 시 반드시 @doc/COMMIT_CONVENTION.md 파일을 참고하여 형식에 맞게 작성합니다.
+각 Phase의 상세 설계는 `docs/design/phase{N}.md` 파일로 관리한다.
+
+| 문서 | 설명 |
+|------|------|
+| [docs/design/phase1.md](docs/design/phase1.md) | Phase 1 — 메인 화면 (레이아웃, 컴포넌트 구조, 상태·키 입력 처리) |
+| [docs/design/phase2.md](docs/design/phase2.md) | Phase 2 — 게임 캔버스 및 배경 (화면 전환, Canvas 게임 루프, 경계선) |
+| [docs/design/phase3.md](docs/design/phase3.md) | Phase 3 — 플레이어 등장 및 이동 (useRef 상태, 키 입력, 벽 충돌) |
+| [docs/design/phase4.md](docs/design/phase4.md) | Phase 4 — 풍선 등장 및 물리 (중력, 바닥·벽 반사, 크기별 설정) |
+| [docs/design/phase5.md](docs/design/phase5.md) | Phase 5 — 와이어 발사 (Wire 상태, 1발 제한, 천장 소멸) |
+| [docs/design/phase6.md](docs/design/phase6.md) | Phase 6 — 풍선 격파 및 분열 (충돌 감지, splitBalloon, 클리어 판정) |
+| [docs/design/phase7.md](docs/design/phase7.md) | Phase 7 — 플레이어 사망 및 잔기 (사각형-원 충돌, 리스폰, 게임 오버) |
+| [docs/design/phase8.md](docs/design/phase8.md) | Phase 8 — 제한 시간 (60초 카운트다운, 시간 초과 사망, HUD 타이머) |
+
+## 기술 스택
+
+- **React 19** + **TypeScript 6** — UI 프레임워크 및 타입 시스템
+- **Vite 8** — 번들러 및 개발 서버 (`@vitejs/plugin-react` 사용)
+- **ESLint 10** — 린터 (`typescript-eslint`, `eslint-plugin-react-hooks`, `eslint-plugin-react-refresh`)
+- TypeScript는 `bundler` moduleResolution 모드로 동작하며, `noEmit: true`로 타입 체크만 수행
+
+## 주요 명령어
+
+```bash
+npm install       # 의존성 설치 (최초 1회)
+npm run dev       # 개발 서버 실행 → http://localhost:5173
+npm run build     # 프로덕션 빌드 (tsc -b && vite build)
+npm run preview   # 빌드 결과물 미리보기
+npm run lint      # ESLint 검사
+```
+
+## 테스트 방법
+
+현재 테스트 프레임워크(Vitest, Jest 등)가 설정되어 있지 않습니다. 테스트가 필요한 경우 Vitest를 권장합니다:
+
+```bash
+npm install -D vitest @testing-library/react @testing-library/jest-dom
+```
+
+`vite.config.ts`에 `test` 설정을 추가한 후 `npm run test`로 실행합니다.
+
+## 코드 구조
+
+```
+src/
+├── main.tsx      # 진입점 — React 루트를 #root 엘리먼트에 마운트
+├── App.tsx       # 최상위 컴포넌트
+├── App.css       # App 컴포넌트 전용 스타일
+├── index.css     # 전역 스타일
+└── assets/       # 정적 에셋 (SVG, 이미지)
+```
+
+- 컴포넌트는 `src/` 하위에 작성하며, 파일명은 PascalCase (`.tsx`)를 사용합니다.
+- 전역 스타일은 `index.css`, 컴포넌트 스타일은 컴포넌트명과 동일한 `.css` 파일로 분리합니다.
+
+## TypeScript 설정 주의사항
+
+- `noUnusedLocals`, `noUnusedParameters` — 미사용 변수/파라미터는 빌드 오류 발생
+- `erasableSyntaxOnly` — `enum` 대신 `const` 객체 또는 union 타입 사용 권장
+- `allowImportingTsExtensions` — import 시 `.tsx` 확장자 명시 가능
